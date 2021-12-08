@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport">
+    <title>Аппроксимация остаточных напряжений</title>
+
+    <link href="/webjars/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
+    <link href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.css" rel="stylesheet" type="text/css"/>
+
+    <script src="/script.js"></script>
+    <script src="/webjars/vue/2.6.11/vue.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.15.2/axios.js"></script>
+    <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.js"></script>
+
+    <script src="/webjars/highcharts/8.0.0/highcharts.js"></script>
+    <script src="/webjars/highcharts/8.0.0/modules/boost.js"></script>
+    <script src="/webjars/highcharts/8.0.0/modules/exporting.js"></script>
+    <script src="/webjars/highcharts/8.0.0/modules/export-data.js"></script>
+    <script src="/webjars/highcharts/8.0.0/modules/offline-exporting.js"></script>
+</head>
+<body>
+<div id="app">
+    <b-container fluid>
+        <b-row class="mt-3">
+            <b-col sm="3">
+                <b-form v-on:submit.prevent="postParameters">
+                    <b-input-group class="mb-2">
+                        <b-input-group-prepend is-text><i>E</i></b-input-group-prepend>
+                        <b-form-input required step="0.1" type="number" v-model="E"></b-form-input>
+
+                        <b-input-group-prepend is-text>&mu;</b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="mu"></b-form-input>
+                    </b-input-group>
+
+                    <b-input-group class="mb-2">
+                        <b-input-group-prepend is-text><i>R</i><sub>1</sub></b-input-group-prepend>
+                        <b-form-input readonly type="number" v-model="R1"></b-form-input>
+
+                        <b-input-group-prepend is-text><i>R</i><sub>2</sub></b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="R2"></b-form-input>
+
+                        <b-input-group-prepend is-text>d<i>r</i></b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="dr"></b-form-input>
+                    </b-input-group>
+
+                    <b-input-group class="mb-2">
+                        <b-form-input required step="0.001" type="number" v-model="sigma_zv_start"></b-form-input>
+                        <b-input-group-prepend is-text>&le; &sigma;* &le;</b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="sigma_zv_end"></b-form-input>
+                        <b-input-group-prepend is-text>шаг</b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="sigma_zv_step"></b-form-input>
+                    </b-input-group>
+
+                    <b-input-group class="mb-2">
+                        <b-form-input required step="0.001" type="number" v-model="h_zv_start"></b-form-input>
+                        <b-input-group-prepend is-text>&le;&nbsp;<i>h</i>*&nbsp;&le;</b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="h_zv_end"></b-form-input>
+                        <b-input-group-prepend is-text>шаг</b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="h_zv_step"></b-form-input>
+                    </b-input-group>
+
+                    <b-input-group class="mb-2">
+                        <b-form-input required step="0.001" type="number" v-model="h0_start"></b-form-input>
+                        <b-input-group-prepend is-text>&le;&nbsp;<i>h</i><sub>0</sub>&nbsp;&le;</b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="h0_end"></b-form-input>
+                        <b-input-group-prepend is-text>шаг</b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="h0_step"></b-form-input>
+                    </b-input-group>
+
+                    <b-input-group class="mb-2">
+                        <b-form-input required step="0.001" type="number" v-model="b_start"></b-form-input>
+                        <b-input-group-prepend is-text>&le;&nbsp;<i>b</i>&nbsp;&le;</b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="b_end"></b-form-input>
+                        <b-input-group-prepend is-text>шаг</b-input-group-prepend>
+                        <b-form-input required step="0.000000001" type="number" v-model="b_step"></b-form-input>
+                    </b-input-group>
+
+                    <b-input-group class="mb-2">
+                        <b-form-input required step="0.001" type="number" v-model="alpha_start"></b-form-input>
+                        <b-input-group-prepend is-text>&le; &alpha; &le;</b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="alpha_end"></b-form-input>
+                        <b-input-group-prepend is-text>шаг</b-input-group-prepend>
+                        <b-form-input required step="0.001" type="number" v-model="alpha_step"></b-form-input>
+                    </b-input-group>
+
+                    <b-input-group class="mb-2">
+                        <b-input-group-prepend is-text><i>r</i></b-input-group-prepend>
+                        <b-form-textarea :formatter="textareaFormatter" no-resize rows="10" v-model="text_r_theta_exp"></b-form-textarea>
+
+                        <b-input-group-prepend is-text>&sigma;<sub>&theta;</sub><sup>res</sup>
+                        </b-input-group-prepend>
+                        <b-form-textarea :formatter="textareaFormatter" no-resize rows="10" v-model="text_sigma_theta_exp"></b-form-textarea>
+                    </b-input-group>
+
+                    <b-input-group class="mb-2">
+                        <b-input-group-prepend is-text><i>r</i></b-input-group-prepend>
+                        <b-form-textarea :formatter="textareaFormatter" no-resize rows="10" v-model="text_r_z_exp"></b-form-textarea>
+
+                        <b-input-group-prepend is-text>&sigma;<sub>z</sub><sup>res</sup></b-input-group-prepend>
+                        <b-form-textarea :formatter="textareaFormatter" no-resize rows="10" v-model="text_sigma_z_exp"></b-form-textarea>
+                    </b-input-group>
+
+                    <b-button type="submit" variant="primary">Посчитать</b-button>
+                    <b-button @click="cancel" variant="outline-danger">Отмена</b-button>
+                    <br/>
+                    <h5>{{ totalIterations }} итераций</h5>
+                </b-form>
+            </b-col>
+            <b-col sm="9">
+                <b-row>
+                    <b-col sm="4">
+                        <div id="sigma_res_theta"></div>
+                    </b-col>
+                    <b-col sm="4">
+                        <div id="sigma_res_r"></div>
+                    </b-col>
+                    <b-col sm="4">
+                        <div id="sigma_res_z"></div>
+                    </b-col>
+                </b-row>
+                <b-row>
+                    <b-col sm="4">
+                        <div id="q_theta"></div>
+                    </b-col>
+                    <b-col sm="4">
+                        <div id="q_r"></div>
+                    </b-col>
+                    <b-col sm="4">
+                        <div id="q_z"></div>
+                    </b-col>
+                </b-row>
+                <b-row>
+                    <b-col sm="2" offset-sm="1">
+                        <b-input-group class="mb-2">
+                            <b-input-group-prepend is-text><i>h</i><sub>0</sub></b-input-group-prepend>
+                            <b-form-input readonly type="number" v-model="h0"></b-form-input>
+                        </b-input-group>
+                    </b-col>
+                    <b-col sm="2">
+                        <b-input-group class="mb-2">
+                            <b-input-group-prepend is-text><i>h</i>*</b-input-group-prepend>
+                            <b-form-input readonly type="number" v-model="h_zv"></b-form-input>
+                        </b-input-group>
+                    </b-col>
+                    <b-col sm="2">
+                        <b-input-group class="mb-2">
+                            <b-input-group-prepend is-text>&sigma;*</b-input-group-prepend>
+                            <b-form-input readonly type="number" v-model="sigma_zv"></b-form-input>
+                        </b-input-group>
+                    </b-col>
+                    <b-col sm="2">
+                        <b-input-group class="mb-2">
+                            <b-input-group-prepend is-text>&sigma;<sub>0</sub></b-input-group-prepend>
+                            <b-form-input readonly type="number" v-model="sigma0"></b-form-input>
+                        </b-input-group>
+                    </b-col>
+                    <b-col sm="2">
+                        <b-input-group class="mb-2">
+                            <b-input-group-prepend is-text>&sigma;<sub>1</sub></b-input-group-prepend>
+                            <b-form-input readonly type="number" v-model="sigma1"></b-form-input>
+                        </b-input-group>
+                    </b-col>
+
+                </b-row>
+
+                <b-row>
+                    <b-col sm="2" offset-sm="1">
+                        <b-input-group class="mb-2">
+                            <b-input-group-prepend is-text><i>b</i></b-input-group-prepend>
+                            <b-form-input readonly type="number" v-model="b"></b-form-input>
+                        </b-input-group>
+                    </b-col>
+                    <b-col sm="2">
+                        <b-input-group class="mb-2">
+                            <b-input-group-prepend is-text>&alpha;</b-input-group-prepend>
+                            <b-form-input readonly type="number" v-model="alpha"></b-form-input>
+                        </b-input-group>
+                    </b-col>
+                    <b-col sm="2">
+                        <b-input-group class="mb-2">
+                            <b-input-group-prepend is-text>&Delta;<sub>&theta;</sub></b-input-group-prepend>
+                            <b-form-input readonly type="number" v-model="(delta_theta * 100).toFixed(3)"></b-form-input>
+                            <b-input-group-append is-text>%</b-input-group-append>
+                        </b-input-group>
+                    </b-col>
+                    <b-col sm="2">
+                        <b-input-group class="mb-2">
+                            <b-input-group-prepend is-text>&Delta;<sub>z</sub></b-input-group-prepend>
+                            <b-form-input readonly type="number" v-model="(delta_z * 100).toFixed(3)"></b-form-input>
+                            <b-input-group-append is-text>%</b-input-group-append>
+                        </b-input-group>
+                    </b-col>
+                    <b-col sm="2">
+                        <b-input-group class="mb-2">
+                            <b-input-group-prepend is-text>&Delta;<sub>&theta;</sub>&nbsp;+ &Delta;<sub>z</sub></b-input-group-prepend>
+                            <b-form-input readonly type="number" v-model="(delta * 100).toFixed(3)"></b-form-input>
+                            <b-input-group-append is-text>%</b-input-group-append>
+                        </b-input-group>
+                    </b-col>
+                </b-row>
+            </b-col>
+        </b-row>
+        <b-row>
+            <b-col sm="12">
+                <div class="fixed-bottom">
+                    <b-progress :animated="percent < 100" :value="percent" show-progress variant="success"></b-progress>
+                </div>
+            </b-col>
+        </b-row>
+    </b-container>
+</div>
+</body>
+</html>
